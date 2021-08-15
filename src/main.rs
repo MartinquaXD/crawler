@@ -95,6 +95,19 @@ async fn crawl(req: HttpRequest, data: web::Data<AppState>) -> impl Responder {
         start.elapsed().as_millis()
     )
 }
+
+async fn list_urls(req: HttpRequest, data: web::Data<AppState>) -> impl Responder {
+    let domain = req
+        .match_info()
+        .get("domain")
+        .expect("The route should only match with a domain name.")
+        .to_string();
+    let urls = match data.crawled_pages.get(&domain) {
+        Some(read_guard) => read_guard.clone(),
+        None => Vec::default(),
+    };
+    web::Json(urls)
+}
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState::default());
@@ -106,6 +119,7 @@ async fn main() -> std::io::Result<()> {
             //but because I don't know how this code will be tested I also exposed
             //it as a GET route
             .route("/v1/crawl/{domain}", web::post().to(crawl))
+            .route("/v1/urls/{domain}", web::get().to(list_urls))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
