@@ -1,10 +1,51 @@
 #![feature(async_closure)]
 use actix_web::{web, App, HttpRequest, HttpServer, Responder};
 use chashmap::CHashMap;
+use reqwest::Client;
+use scraper::{Html, Selector};
+use std::convert::AsRef;
+use url::Url;
+
+type Error = Box<dyn std::error::Error>;
+type MyResult<T> = Result<T, Error>;
 
 #[derive(Debug, Clone, Default)]
 struct AppState {
     pub crawled_pages: CHashMap<String, Vec<String>>,
+}
+
+async fn get_page(link: &impl AsRef<str>) -> MyResult<Html> {
+    let response = Client::builder()
+        .build()?
+        .get(link.as_ref())
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    Ok(Html::parse_document(&response))
+}
+
+async fn get_urls_on_page(url: String) -> Vec<Url> {
+    match get_page(&url).await {
+        Err(err) => {
+            println!("{}", err);
+            vec![]
+        },
+        Ok(page) => {
+            let selector = Selector::parse("a").expect("Can't parse selector");
+            page.select(&selector)
+                .filter_map(|element| {
+                    element
+                        .value()
+                        .attr("href")
+                        .map(Url::parse)
+                        .filter(|parse_result| parse_result.is_ok())
+                        .map(|parse_result| parse_result.unwrap())
+                })
+                .collect()
+        }
+    }
 }
 
 #[actix_web::main]

@@ -7,7 +7,11 @@ edition = "2018"
 
 [dependencies]
 actix-web = "3"
+scraper = "0.12.0"
+url = "2"
+reqwest = "0.10"
 chashmap = "2.2.2"
+futures = "0.3.1"
 
 [profile.release]
 lto = true
