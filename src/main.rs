@@ -108,6 +108,20 @@ async fn list_urls(req: HttpRequest, data: web::Data<AppState>) -> impl Responde
     };
     web::Json(urls)
 }
+
+async fn count_urls(req: HttpRequest, data: web::Data<AppState>) -> impl Responder {
+    let domain = req
+        .match_info()
+        .get("domain")
+        .expect("The route should only match with a domain name.")
+        .to_string();
+    let count = match data.crawled_pages.get(&domain) {
+        Some(read_guard) => read_guard.len(),
+        None => 0,
+    };
+    web::Json(count)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState::default());
@@ -120,6 +134,7 @@ async fn main() -> std::io::Result<()> {
             //it as a GET route
             .route("/v1/crawl/{domain}", web::post().to(crawl))
             .route("/v1/urls/{domain}", web::get().to(list_urls))
+            .route("/v1/url_count/{domain}", web::get().to(count_urls))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
