@@ -4,7 +4,9 @@ use chashmap::CHashMap;
 use futures::StreamExt;
 use reqwest::Client;
 use scraper::{Html, Selector};
+use std::collections::HashSet;
 use std::convert::AsRef;
+use std::time::Instant;
 use url::Url;
 
 type Error = Box<dyn std::error::Error>;
@@ -59,12 +61,51 @@ async fn execute_throttled<T>(futures: Vec<impl futures::Future<Output = Vec<T>>
         .flatten()
         .collect()
 }
+
+async fn crawl(req: HttpRequest, data: web::Data<AppState>) -> impl Responder {
+    let start = Instant::now();
+    let target_domain = req
+        .match_info()
+        .get("domain")
+        .expect("The route should only match with a domain name.");
+
+    let mut crawled_urls = HashSet::<String>::default();
+    let mut urls_to_visit = HashSet::<String>::default();
+    urls_to_visit.insert(format!("http://{}", target_domain));
+
+    while !urls_to_visit.is_empty() {
+        crawled_urls.extend(urls_to_visit.iter().cloned());
+        let get_child_urls: Vec<_> = urls_to_visit.into_iter().map(get_urls_on_page).collect();
+        let child_urls = execute_throttled(get_child_urls).await;
+
+        urls_to_visit = HashSet::default();
+        for url in child_urls {
+            if url.domain() == Some(target_domain) && !crawled_urls.contains(url.as_str()) {
+                urls_to_visit.insert(url.into());
+            } else {
+                crawled_urls.insert(url.into());
+            }
+        }
+    }
+    data.crawled_pages
+        .insert(target_domain.into(), crawled_urls.into_iter().collect());
+    format!(
+        "crawled {} in {}ms!",
+        &target_domain,
+        start.elapsed().as_millis()
+    )
+}
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState::default());
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
+            .route("/v1/crawl/{domain}", web::get().to(crawl))
+            //I would usually consider /v1/crawl to be a POST route
+            //but because I don't know how this code will be tested I also exposed
+            //it as a GET route
+            .route("/v1/crawl/{domain}", web::post().to(crawl))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
