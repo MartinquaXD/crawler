@@ -13,6 +13,7 @@ reqwest = "0.10"
 chashmap = "2.2.2"
 num_cpus = "1.13.0"
 futures = "0.3.1"
+openssl = { version = "0.10", features = ["vendored"] }
 
 [profile.release]
 lto = true
