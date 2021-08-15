@@ -11,6 +11,7 @@ scraper = "0.12.0"
 url = "2"
 reqwest = "0.10"
 chashmap = "2.2.2"
+num_cpus = "1.13.0"
 futures = "0.3.1"
 
 [profile.release]

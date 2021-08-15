@@ -1,6 +1,7 @@
 #![feature(async_closure)]
 use actix_web::{web, App, HttpRequest, HttpServer, Responder};
 use chashmap::CHashMap;
+use futures::StreamExt;
 use reqwest::Client;
 use scraper::{Html, Selector};
 use std::convert::AsRef;
@@ -48,6 +49,16 @@ async fn get_urls_on_page(url: String) -> Vec<Url> {
     }
 }
 
+async fn execute_throttled<T>(futures: Vec<impl futures::Future<Output = Vec<T>>>) -> Vec<T> {
+    futures::stream::iter(futures)
+        //only request at most 1 page per CPU to avoid timeout errors
+        .buffer_unordered(num_cpus::get())
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .flatten()
+        .collect()
+}
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState::default());
