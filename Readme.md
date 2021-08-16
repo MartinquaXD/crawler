@@ -1,9 +1,14 @@
 # Simple Web Crawler
 
+## Behavior
+
+When given a domain the crawler will request that page. On the received HTML it will look through the href attribute of all anchor tags. Every href which is parsable as an URL is considered visable.
+Every new URL which belongs to the requested domain will be crawled afterwards. Every URL which doesn't belong to the same domain will simply be indexed but not followed up.
+
 ## REST Endpoints
 
 **POST /v1/crawl/{domain}**
-Indexes links for the given domain. The crawler will index all parsable URLs. If a found URL belongs to the specified domain the crawler will try to get it in order to look for more URLs.
+Indexes links for the given domain.
 
 **GET /v1/crawl/{domain}**
 This endpoint is only also registered to the GET method because it is easier to test with the browser and I don't know how third parties would like to use the API.
