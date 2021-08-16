@@ -22,6 +22,14 @@ If a domain has not been crawled yet, this route will simply return 0. An error 
 After a domain has been successfully crawled, this route will output a list of all unique indexed URLs.
 If a domain has not been crawled yet, this route will simply return an empty list. An error response would make more sense but since the exact behavior in such a case was not defined I decided to make the implementation simpler.
 
+### Examples
+
+I tested with the official actix.rs web page. Which would lead to following REST calls:
+
+**GET /v1/crawl/actix.rs**
+**GET /v1/url_count/actix.rs**
+**GET /v1/urls/actix.rs**
+
 ## Docker
 
 Since Rusts statically linked binaries make it very easy to use with Docker, I decided to offer a Dockerfile for it.
